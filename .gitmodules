@@ -1,0 +1,3 @@
+[submodule "VeriSimplePIR"]
+	path = VeriSimplePIR
+	url = https://github.com/sofianeazogagh/VeriSimplePIR
