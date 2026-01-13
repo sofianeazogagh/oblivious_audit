@@ -1,4 +1,4 @@
-#include "csv_loader.h"
+#include "data_loader.h"
 #include <openssl/sha.h>
 #include <iostream>
 #include <iomanip>
@@ -16,41 +16,61 @@ int main(int argc, char* argv[]) {
     const uint64_t d = 2;
     
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <csv_file> [query_index]" << std::endl;
-        std::cerr << "  csv_file: chemin vers le fichier CSV contenant une colonne de valeurs numériques" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <data_file> [query_index] [column_name]" << std::endl;
+        std::cerr << "  data_file: chemin vers le fichier CSV ou Parquet contenant une colonne de valeurs numériques" << std::endl;
         std::cerr << "  query_index: index de l'élément à récupérer (défaut: 0)" << std::endl;
+        std::cerr << "  column_name: nom de la colonne (optionnel, pour Parquet uniquement)" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Note: La précision d=" << d << " bits est définie dans le code source." << std::endl;
         std::cerr << "      Valeurs valides: [0, " << ((1ULL << d) - 1) << "]" << std::endl;
+        std::cerr << "      Formats supportés: .csv, .parquet" << std::endl;
         return 1;
     }
     
-    const std::string csvFile = argv[1];
+    const std::string dataFile = argv[1];
     const uint64_t queryIndex = (argc > 2) ? std::stoull(argv[2]) : 0;
+    const std::string columnName = (argc > 3) ? argv[3] : "";
+    
+    // Détecter le format du fichier
+    FileFormat format = detectFileFormat(dataFile);
+    
+    if (format == FileFormat::UNKNOWN) {
+        std::cerr << "Erreur: format de fichier non reconnu. Formats supportés: .csv, .parquet" << std::endl;
+        return 1;
+    }
     
     std::cout << "========================================" << std::endl;
-    std::cout << "  VLHEPIR avec CSV" << std::endl;
+    std::cout << "  VLHEPIR avec " << (format == FileFormat::PARQUET ? "Parquet" : "CSV") << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Fichier CSV: " << csvFile << std::endl;
+    std::cout << "Fichier: " << dataFile << std::endl;
+    std::cout << "Format: " << (format == FileFormat::PARQUET ? "Parquet" : "CSV") << std::endl;
     std::cout << "Précision (d): " << d << " bits" << std::endl;
     std::cout << "Index de requête: " << queryIndex << std::endl;
+    if (!columnName.empty()) {
+        std::cout << "Colonne: " << columnName << std::endl;
+    }
     std::cout << std::endl;
     
     // ========================================================================
-    // 2. Analyser le CSV
+    // 2. Analyser le fichier
     // ========================================================================
-    std::cout << "=== Analyse du CSV ===" << std::endl;
-    printCSVStats(csvFile, d, true);
+    std::cout << "=== Analyse du fichier ===" << std::endl;
+    if (format == FileFormat::PARQUET) {
+        printParquetStats(dataFile, d, columnName);
+    } else {
+        printCSVStats(dataFile, d, true);
+    }
     std::cout << std::endl;
     
     // ========================================================================
-    // 3. Créer le PIR depuis le CSV
+    // 3. Créer le PIR depuis le fichier
     // ========================================================================
     std::cout << "=== Parameters instantiation ===" << std::endl;
-    VLHEPIR pir = createVLHEPIRFromCSV(
-        csvFile,
+    VLHEPIR pir = createVLHEPIRFromFile(
+        dataFile,
         d,          // précision en bits
-        true,       // hasHeader
+        columnName, // nom de la colonne (pour Parquet)
+        true,       // hasHeader (pour CSV)
         true,       // allowTrivial
         false,      // verbose (mettre à true pour voir l'optimisation détaillée)
         false,      // simplePIR

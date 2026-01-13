@@ -1,69 +1,60 @@
 # Makefile pour projet utilisant VeriSimplePIR avec CSV
 # Multi OS makefile (macOS et Linux)
 
-# ============================================================================
-# Configuration système
-# ============================================================================
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
-HOST_SYSTEM = $(shell uname | cut -f 1 -d_)
-SYSTEM ?= $(HOST_SYSTEM)
+PKG_CONFIG ?= pkg-config
 
 # ============================================================================
-# Chemins vers VeriSimplePIR (à adapter selon votre installation)
+# Chemins vers VeriSimplePIR (relatifs au projet)
 # ============================================================================
 VERISIMPLEPIR_DIR := $(shell pwd)/VeriSimplePIR
 VERISIMPLEPIR_LIB := $(VERISIMPLEPIR_DIR)/bin/lib/libverisimplepir
 VERISIMPLEPIR_INC := $(VERISIMPLEPIR_DIR)/src/lib
 
 # ============================================================================
-# Configuration du compilateur
+# Configuration du compilateur (portable)
 # ============================================================================
-CPPSTD := -std=c++17
+CC ?= clang++
+CPPFLAGS += -std=c++17 -O3 -Wall -fno-omit-frame-pointer
 
-ifeq ($(SYSTEM),Darwin)
-    # Configuration macOS
-    CC := /Users/sofianeazogagh/local/llvm-19.1.7/bin/clang++ $(CPPSTD)
-    LDFLAGS +=                -L/Users/sofianeazogagh/local/llvm-19.1.7/lib \
-               -Wl,-rpath,/Users/sofianeazogagh/local/llvm-19.1.7/lib \
-               -L/usr/local/lib \
-               -L/opt/homebrew/opt/openssl@3/lib \
-               -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib \
-               -L$(VERISIMPLEPIR_DIR)/bin/lib \
-               -Wl,-rpath,$(VERISIMPLEPIR_DIR)/bin/lib
-    
-    CPPFLAGS += -I/Users/sofianeazogagh/local/llvm-19.1.7/include \
-                -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
-                -I/opt/homebrew/opt/openssl@3/include \
-                -I$(VERISIMPLEPIR_INC)
-    
-    LIBSUFFIX := .dylib
-    EXESUFFIX :=
-else
-    # Configuration Linux
-    CC := clang++ $(CPPSTD) -Wloop-analysis
-    CPPFLAGS += -Wno-ignored-attributes
-    LDFLAGS += -L/usr/local/lib \
-               -L$(VERISIMPLEPIR_DIR)/bin/lib \
-               -lrt
-    LIBSUFFIX := .so
-    EXESUFFIX :=
-endif
-
-# ============================================================================
-# Options de compilation
-# ============================================================================
-CPPFLAGS += -O3 -Wall -fno-omit-frame-pointer
-
-# SSE4 et AES uniquement sur x86_64
+# SSE4 / AES seulement sur x86_64
 ifeq ($(UNAME_M),x86_64)
     CPPFLAGS += -maes -msse4
 endif
 
 # ============================================================================
-# Bibliothèques
+# OpenSSL via pkg-config (fallback sur -lssl -lcrypto)
 # ============================================================================
-LDFLAGS += -lssl -lcrypto -lverisimplepir
+OPENSSL_CFLAGS := $(shell $(PKG_CONFIG) --cflags openssl 2>/dev/null)
+OPENSSL_LIBS   := $(shell $(PKG_CONFIG) --libs openssl 2>/dev/null)
+CPPFLAGS += $(OPENSSL_CFLAGS) -I$(VERISIMPLEPIR_INC)
+LDFLAGS  += $(if $(OPENSSL_LIBS),$(OPENSSL_LIBS),-lssl -lcrypto)
+
+# ============================================================================
+# Support Parquet (optionnel, activé si PARQUET_SUPPORT=1 et pkg-config ok)
+# ============================================================================
+PARQUET_SUPPORT ?= 0
+ifeq ($(PARQUET_SUPPORT),1)
+    ARROW_CFLAGS  := $(shell $(PKG_CONFIG) --cflags arrow parquet 2>/dev/null)
+    ARROW_LIBS    := $(shell $(PKG_CONFIG) --libs arrow parquet 2>/dev/null)
+    ifneq ($(ARROW_CFLAGS)$(ARROW_LIBS),)
+        CPPFLAGS += -DPARQUET_SUPPORT $(ARROW_CFLAGS)
+        LDFLAGS  += $(ARROW_LIBS)
+    else
+        $(warning PARQUET_SUPPORT=1 mais Arrow/Parquet introuvables via pkg-config)
+    endif
+endif
+
+# ============================================================================
+# Bibliothèque VeriSimplePIR
+# ============================================================================
+LDFLAGS += -L$(VERISIMPLEPIR_DIR)/bin/lib -Wl,-rpath,$(VERISIMPLEPIR_DIR)/bin/lib -lverisimplepir
+ifeq ($(UNAME_S),Darwin)
+    LDFLAGS += -lc++
+endif
+LIBSUFFIX := $(if $(filter $(UNAME_S),Darwin),.dylib,.so)
+EXESUFFIX :=
 
 # ============================================================================
 # Structure du projet
@@ -97,7 +88,7 @@ directories:
 $(TARGET): $(OBJECTS) $(VERISIMPLEPIR_LIB)$(LIBSUFFIX)
 	@echo "Linking $(TARGET)..."
 	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
-ifeq ($(SYSTEM),Darwin)
+ifeq ($(UNAME_S),Darwin)
 	@echo "Fixing library path..."
 	@install_name_tool -change bin/lib/libverisimplepir.dylib $(VERISIMPLEPIR_DIR)/bin/lib/libverisimplepir.dylib $@ 2>/dev/null || true
 endif
@@ -140,4 +131,4 @@ help:
 	@echo "Configuration:"
 	@echo "  VeriSimplePIR: $(VERISIMPLEPIR_DIR)"
 	@echo "  Compilateur:   $(CC)"
-	@echo "  Système:       $(SYSTEM) ($(UNAME_M))"
+	@echo "  Système:       $(UNAME_S) ($(UNAME_M))"
