@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string>
 
-// Support Parquet avec Apache Arrow
+// Parquet support with Apache Arrow
 #ifdef PARQUET_SUPPORT
 #include <arrow/api.h>
 #include <arrow/io/api.h>
@@ -19,30 +19,30 @@
 #endif
 
 // ============================================================================
-// Fonctions utilitaires
+// Utility functions
 // ============================================================================
 
 /**
- * Compte le nombre de lignes dans un fichier CSV (sans l'en-tête)
+ * Counts the number of lines in a CSV file (excluding header)
  */
 uint64_t countCSVLines(const std::string& csvFilePath, bool hasHeader) {
     std::ifstream file(csvFilePath);
     if (!file.is_open()) {
-        std::cerr << "Erreur: impossible d'ouvrir le fichier " << csvFilePath << std::endl;
+        std::cerr << "Error: unable to open file " << csvFilePath << std::endl;
         return 0;
     }
     
     std::string line;
     uint64_t count = 0;
     
-    // Ignorer l'en-tête si présent
+    // Skip header if present
     if (hasHeader && std::getline(file, line)) {
-        // Ligne d'en-tête ignorée
+        // Header line ignored
     }
     
-    // Compter les lignes de données
+    // Count data lines
     while (std::getline(file, line)) {
-        // Ignorer les lignes vides
+        // Ignore empty lines
         if (!line.empty() && line.find_first_not_of(" \t\r\n") != std::string::npos) {
             count++;
         }
@@ -53,7 +53,7 @@ uint64_t countCSVLines(const std::string& csvFilePath, bool hasHeader) {
 }
 
 /**
- * Détermine la taille en bits nécessaire pour stocker une valeur
+ * Determines the bit size needed to store a value
  */
 uint64_t calculateBitSize(uint64_t value) {
     if (value == 0) return 1;
@@ -61,16 +61,16 @@ uint64_t calculateBitSize(uint64_t value) {
 }
 
 /**
- * Vérifie que toutes les valeurs dans la colonne sont valides pour d bits
- * Si d=1, vérifie que les valeurs sont 0 ou 1
- * Sinon, vérifie que les valeurs sont dans [0, 2^d-1]
+ * Verifies that all values in the column are valid for d bits
+ * If d=1, checks that values are 0 or 1
+ * Otherwise, checks that values are in [0, 2^d-1]
  */
 bool validateColumnForD(const std::string& csvFilePath, 
                         uint64_t d,
                         bool hasHeader) {
     std::ifstream file(csvFilePath);
     if (!file.is_open()) {
-        std::cerr << "Erreur: impossible d'ouvrir le fichier " << csvFilePath << std::endl;
+        std::cerr << "Error: unable to open file " << csvFilePath << std::endl;
         return false;
     }
     
@@ -78,9 +78,9 @@ bool validateColumnForD(const std::string& csvFilePath,
     uint64_t rowCount = 0;
     entry_t maxValue = (entry_t(1) << d) - entry_t(1);
     
-    // Ignorer l'en-tête
+    // Skip header
     if (hasHeader && std::getline(file, line)) {
-        // Ligne d'en-tête ignorée
+        // Header line ignored
     }
     
     while (std::getline(file, line)) {
@@ -89,9 +89,9 @@ bool validateColumnForD(const std::string& csvFilePath,
         std::stringstream ss(line);
         std::string cell;
         
-        // Prendre la première colonne
+        // Take the first column
         if (std::getline(ss, cell, ',')) {
-            // Enlever les espaces
+            // Remove spaces
             cell.erase(0, cell.find_first_not_of(" \t\r\n"));
             cell.erase(cell.find_last_not_of(" \t\r\n") + 1);
             
@@ -101,14 +101,14 @@ bool validateColumnForD(const std::string& csvFilePath,
                     entry_t entryValue = entry_t(static_cast<unsigned long>(value));
                     
                     if (entryValue > maxValue) {
-                        std::cerr << "Erreur: valeur trop grande trouvée à la ligne " 
+                        std::cerr << "Error: value too large found at line " 
                                   << (rowCount + 1) << ": " << cell 
-                                  << " (max pour d=" << d << ": " << maxValue.toUnsignedLong() << ")" << std::endl;
+                                  << " (max for d=" << d << ": " << maxValue.toUnsignedLong() << ")" << std::endl;
                         file.close();
                         return false;
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "Erreur: valeur non numérique à la ligne " 
+                    std::cerr << "Error: non-numeric value at line " 
                               << (rowCount + 1) << ": " << cell << std::endl;
                     file.close();
                     return false;
@@ -123,26 +123,26 @@ bool validateColumnForD(const std::string& csvFilePath,
 }
 
 // ============================================================================
-// Fonctions de chargement dans Database
+// Database loading functions
 // ============================================================================
 
 /**
- * Charge les données d'une colonne CSV dans une Database
- * Les valeurs doivent être dans [0, 2^d-1]
+ * Loads CSV column data into a Database
+ * Values must be in [0, 2^d-1]
  */
 bool loadDatabaseFromCSV(Database& db,
                          const std::string& csvFilePath,
                          uint64_t d,
                          bool hasHeader,
                          uint64_t maxRows) {
-    // Allouer la mémoire si nécessaire
+    // Allocate memory if necessary
     if (!db.alloc) {
         db.data = (entry_t*)malloc(db.N * sizeof(entry_t));
         db.alloc = true;
     }
     
     if (!db.data) {
-        std::cerr << "Erreur: échec d'allocation mémoire" << std::endl;
+        std::cerr << "Error: memory allocation failed" << std::endl;
         return false;
     }
     
@@ -150,7 +150,7 @@ bool loadDatabaseFromCSV(Database& db,
     
     std::ifstream file(csvFilePath);
     if (!file.is_open()) {
-        std::cerr << "Erreur: impossible d'ouvrir le fichier " << csvFilePath << std::endl;
+        std::cerr << "Error: unable to open file " << csvFilePath << std::endl;
         return false;
     }
     
@@ -159,22 +159,22 @@ bool loadDatabaseFromCSV(Database& db,
     entry_t modulus = entry_t(1) << d;
     entry_t maxValue = modulus - entry_t(1);
     
-    // Ignorer l'en-tête si présent
+    // Skip header if present
     if (hasHeader && std::getline(file, line)) {
-        // Ligne d'en-tête ignorée
+        // Header line ignored
     }
     
-    // Charger les données (première colonne uniquement)
+    // Load data (first column only)
     while (std::getline(file, line) && index < db.N && (maxRows == 0 || index < maxRows)) {
         if (line.empty()) continue;
         
         std::stringstream ss(line);
         std::string cell;
         
-        // Prendre la première colonne
+        // Take the first column
         if (std::getline(ss, cell, ',') && !cell.empty()) {
             try {
-                // Enlever les espaces
+                // Remove spaces
                 cell.erase(0, cell.find_first_not_of(" \t\r\n"));
                 cell.erase(cell.find_last_not_of(" \t\r\n") + 1);
                 
@@ -183,26 +183,26 @@ bool loadDatabaseFromCSV(Database& db,
                     entry_t entryValue = entry_t(static_cast<unsigned long>(value));
                     
                     if (entryValue > maxValue) {
-                        std::cerr << "Avertissement: valeur trop grande à la ligne " 
+                        std::cerr << "Warning: value too large at line " 
                                   << (index + 1) << ": " << cell 
-                                  << " (max pour d=" << d << ": " << maxValue.toUnsignedLong() 
-                                  << ", utilisé " << maxValue.toUnsignedLong() << ")" << std::endl;
+                                  << " (max for d=" << d << ": " << maxValue.toUnsignedLong() 
+                                  << ", used " << maxValue.toUnsignedLong() << ")" << std::endl;
                         db.data[index] = maxValue;
                     } else {
                         db.data[index] = entryValue % modulus;
                     }
                 } else {
-                    // Valeur vide, mettre à 0
+                    // Empty value, set to 0
                     db.data[index] = entry_t(0);
                 }
             } catch (const std::exception& e) {
-                // Si ce n'est pas un nombre, utiliser 0
-                std::cerr << "Avertissement: valeur non numérique à la ligne " 
-                          << (index + 1) << ": " << cell << " (utilisé 0)" << std::endl;
+                // If not a number, use 0
+                std::cerr << "Warning: non-numeric value at line " 
+                          << (index + 1) << ": " << cell << " (used 0)" << std::endl;
                 db.data[index] = entry_t(0);
             }
         } else {
-            // Pas de colonne trouvée, mettre à 0
+            // No column found, set to 0
             db.data[index] = entry_t(0);
         }
         
@@ -212,20 +212,20 @@ bool loadDatabaseFromCSV(Database& db,
     file.close();
     
     if (index < db.N) {
-        std::cerr << "Avertissement: seulement " << index 
-                  << " lignes chargées sur " << db.N << " attendues" << std::endl;
+        std::cerr << "Warning: only " << index 
+                  << " lines loaded out of " << db.N << " expected" << std::endl;
     }
     
     return true;
 }
 
 // ============================================================================
-// Fonctions de création de PIR depuis CSV
+// PIR creation functions from CSV
 // ============================================================================
 
 /**
- * Crée un VeriSimplePIR à partir d'un fichier CSV
- * Détermine automatiquement N, d doit être spécifié
+ * Creates a VeriSimplePIR from a CSV file
+ * Automatically determines N, d must be specified
  */
 VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
                              uint64_t d,
@@ -235,50 +235,50 @@ VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
                              bool simplePIR,
                              uint64_t batchSize,
                              bool honestHint) {
-    // 1. Compter le nombre de lignes
+    // 1. Count the number of lines
     uint64_t N = countCSVLines(csvFilePath, hasHeader);
     if (N == 0) {
-        std::cerr << "Erreur: aucune donnée trouvée dans le CSV" << std::endl;
+        std::cerr << "Error: no data found in CSV" << std::endl;
         exit(1);
     }
     
-    // 2. Vérifier que toutes les valeurs sont valides pour d bits
+    // 2. Verify that all values are valid for d bits
     if (!validateColumnForD(csvFilePath, d, hasHeader)) {
         entry_t maxValue = (entry_t(1) << d) - entry_t(1);
-        std::cerr << "Erreur: le CSV doit contenir uniquement des valeurs dans [0, " 
-                  << maxValue.toUnsignedLong() << "] pour d=" << d << std::endl;
+        std::cerr << "Error: CSV must contain only values in [0, " 
+                  << maxValue.toUnsignedLong() << "] for d=" << d << std::endl;
         exit(1);
     }
     
     if (verbose) {
         std::cout << "CSV Analysis:" << std::endl;
-        std::cout << "  Nombre d'éléments (N): " << N << std::endl;
-        std::cout << "  Taille en bits (d): " << d << std::endl;
-        std::cout << "  Taille de la base: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
+        std::cout << "  Number of elements (N): " << N << std::endl;
+        std::cout << "  Bit size (d): " << d << std::endl;
+        std::cout << "  Database size: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
     }
     
-    // 3. Créer la base de données
+    // 3. Create the database
     Database db(N, d);
     
-    // 4. Charger les données depuis le CSV
+    // 4. Load data from CSV
     if (!loadDatabaseFromCSV(db, csvFilePath, d, hasHeader)) {
-        std::cerr << "Erreur: échec du chargement du CSV" << std::endl;
+        std::cerr << "Error: CSV loading failed" << std::endl;
         exit(1);
     }
     
-    // 5. Créer le PIR
+    // 5. Create the PIR
     VLHEPIR pir(
         N, d,
         allowTrivial,
         verbose,
         simplePIR,
-        false,      // randomData = false (on charge depuis CSV)
+        false,      // randomData = false (loading from CSV)
         batchSize,
         honestHint
     );
     
-    // 6. Copier les données dans pir.db
-    // Note: pir.db est déjà créé dans le constructeur, on doit copier les données
+    // 6. Copy data into pir.db
+    // Note: pir.db is already created in the constructor, we need to copy the data
     if (pir.db.alloc) {
         free(pir.db.data);
     }
@@ -289,7 +289,7 @@ VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
     return pir;
 }
 /**
- * Affiche des statistiques sur un fichier CSV
+ * Prints statistics about a CSV file
  */
 void printCSVStats(const std::string& csvFilePath,
                    uint64_t d,
@@ -297,13 +297,13 @@ void printCSVStats(const std::string& csvFilePath,
     uint64_t N = countCSVLines(csvFilePath, hasHeader);
     entry_t maxValue = (entry_t(1) << d) - entry_t(1);
     
-    // Trouver min et max
+    // Find min and max
     uint64_t minVal = UINT64_MAX, maxVal = 0;
     std::ifstream file(csvFilePath);
     if (file.is_open()) {
         std::string line;
         if (hasHeader && std::getline(file, line)) {
-            // Ignorer l'en-tête
+            // Skip header
         }
         while (std::getline(file, line)) {
             if (line.empty()) continue;
@@ -318,7 +318,7 @@ void printCSVStats(const std::string& csvFilePath,
                         if (value < minVal) minVal = value;
                         if (value > maxVal) maxVal = value;
                     } catch (...) {
-                        // Ignorer
+                        // Ignore
                     }
                 }
             }
@@ -326,25 +326,25 @@ void printCSVStats(const std::string& csvFilePath,
         file.close();
     }
     
-    std::cout << "=== Statistiques CSV ===" << std::endl;
-    std::cout << "Fichier: " << csvFilePath << std::endl;
-    std::cout << "Nombre de lignes (N): " << N << std::endl;
-    std::cout << "Taille en bits (d): " << d << std::endl;
-    std::cout << "Valeur maximale autorisée: " << maxValue.toUnsignedLong() << std::endl;
+    std::cout << "=== CSV Statistics ===" << std::endl;
+    std::cout << "File: " << csvFilePath << std::endl;
+    std::cout << "Number of lines (N): " << N << std::endl;
+    std::cout << "Bit size (d): " << d << std::endl;
+    std::cout << "Maximum allowed value: " << maxValue.toUnsignedLong() << std::endl;
     if (minVal != UINT64_MAX) {
-        std::cout << "Valeur minimale trouvée: " << minVal << std::endl;
-        std::cout << "Valeur maximale trouvée: " << maxVal << std::endl;
+        std::cout << "Minimum value found: " << minVal << std::endl;
+        std::cout << "Maximum value found: " << maxVal << std::endl;
     }
-    std::cout << "Taille de la base: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
+    std::cout << "Database size: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
     std::cout << "===============================" << std::endl;
 }
 
 // ============================================================================
-// Fonctions pour fichiers Parquet
+// Functions for Parquet files
 // ============================================================================
 
 FileFormat detectFileFormat(const std::string& filePath) {
-    // Extraire l'extension du fichier
+    // Extract file extension
     size_t lastDot = filePath.find_last_of('.');
     if (lastDot == std::string::npos) {
         return FileFormat::UNKNOWN;
@@ -365,30 +365,30 @@ FileFormat detectFileFormat(const std::string& filePath) {
 
 uint64_t countParquetLines(const std::string& parquetFilePath, const std::string& columnName) {
     try {
-        std::shared_ptr<arrow::io::ReadableFile> infile;
-        arrow::Status status = arrow::io::ReadableFile::Open(parquetFilePath, &infile);
-        if (!status.ok()) {
-            std::cerr << "Erreur: impossible d'ouvrir le fichier Parquet " << parquetFilePath << std::endl;
+        auto infile_result = arrow::io::ReadableFile::Open(parquetFilePath);
+        if (!infile_result.ok()) {
+            std::cerr << "Error: unable to open Parquet file " << parquetFilePath << std::endl;
             return 0;
         }
+        std::shared_ptr<arrow::io::ReadableFile> infile = infile_result.ValueOrDie();
 
-        std::unique_ptr<parquet::arrow::FileReader> reader;
-        status = parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader);
-        if (!status.ok()) {
-            std::cerr << "Erreur: impossible de lire le fichier Parquet" << std::endl;
+        auto reader_result = parquet::arrow::OpenFile(infile, arrow::default_memory_pool());
+        if (!reader_result.ok()) {
+            std::cerr << "Error: unable to read Parquet file" << std::endl;
             return 0;
         }
+        std::unique_ptr<parquet::arrow::FileReader> reader = std::move(reader_result.ValueOrDie());
 
         std::shared_ptr<arrow::Table> table;
-        status = reader->ReadTable(&table);
+        arrow::Status status = reader->ReadTable(&table);
         if (!status.ok()) {
-            std::cerr << "Erreur: impossible de lire la table Parquet" << std::endl;
+            std::cerr << "Error: unable to read Parquet table" << std::endl;
             return 0;
         }
 
         return table->num_rows();
     } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de la lecture du fichier Parquet: " << e.what() << std::endl;
+        std::cerr << "Error reading Parquet file: " << e.what() << std::endl;
         return 0;
     }
 }
@@ -397,29 +397,29 @@ bool validateParquetColumnForD(const std::string& parquetFilePath,
                                uint64_t d,
                                const std::string& columnName) {
     try {
-        std::shared_ptr<arrow::io::ReadableFile> infile;
-        arrow::Status status = arrow::io::ReadableFile::Open(parquetFilePath, &infile);
-        if (!status.ok()) {
-            std::cerr << "Erreur: impossible d'ouvrir le fichier Parquet" << std::endl;
+        auto infile_result = arrow::io::ReadableFile::Open(parquetFilePath);
+        if (!infile_result.ok()) {
+            std::cerr << "Error: unable to open Parquet file" << std::endl;
             return false;
         }
+        std::shared_ptr<arrow::io::ReadableFile> infile = infile_result.ValueOrDie();
 
-        std::unique_ptr<parquet::arrow::FileReader> reader;
-        status = parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader);
-        if (!status.ok()) {
+        auto reader_result = parquet::arrow::OpenFile(infile, arrow::default_memory_pool());
+        if (!reader_result.ok()) {
             return false;
         }
+        std::unique_ptr<parquet::arrow::FileReader> reader = std::move(reader_result.ValueOrDie());
 
         std::shared_ptr<arrow::Table> table;
-        status = reader->ReadTable(&table);
+        arrow::Status status = reader->ReadTable(&table);
         if (!status.ok()) {
             return false;
         }
 
-        std::string colName = columnName.empty() ? table->ColumnName(0) : columnName;
+        std::string colName = columnName.empty() ? table->schema()->field(0)->name() : columnName;
         std::shared_ptr<arrow::ChunkedArray> column = table->GetColumnByName(colName);
         if (!column) {
-            std::cerr << "Erreur: colonne '" << colName << "' introuvable" << std::endl;
+            std::cerr << "Error: column '" << colName << "' not found" << std::endl;
             return false;
         }
 
@@ -434,7 +434,7 @@ bool validateParquetColumnForD(const std::string& parquetFilePath,
                     if (int64_array->IsNull(i)) continue;
                     int64_t value = int64_array->Value(i);
                     if (value < 0 || entry_t(static_cast<unsigned long>(value)) > maxValue) {
-                        std::cerr << "Erreur: valeur invalide trouvée: " << value << std::endl;
+                        std::cerr << "Error: invalid value found: " << value << std::endl;
                         return false;
                     }
                 }
@@ -444,19 +444,19 @@ bool validateParquetColumnForD(const std::string& parquetFilePath,
                     if (uint64_array->IsNull(i)) continue;
                     uint64_t value = uint64_array->Value(i);
                     if (entry_t(static_cast<unsigned long>(value)) > maxValue) {
-                        std::cerr << "Erreur: valeur invalide trouvée: " << value << std::endl;
+                        std::cerr << "Error: invalid value found: " << value << std::endl;
                         return false;
                     }
                 }
             } else {
-                std::cerr << "Erreur: type de colonne non supporté (doit être INT64 ou UINT64)" << std::endl;
+                std::cerr << "Error: unsupported column type (must be INT64 or UINT64)" << std::endl;
                 return false;
             }
         }
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de la validation Parquet: " << e.what() << std::endl;
+        std::cerr << "Error during Parquet validation: " << e.what() << std::endl;
         return false;
     }
 }
@@ -467,29 +467,29 @@ bool loadDatabaseFromParquet(Database& db,
                             const std::string& columnName,
                             uint64_t maxRows) {
     try {
-        std::shared_ptr<arrow::io::ReadableFile> infile;
-        arrow::Status status = arrow::io::ReadableFile::Open(parquetFilePath, &infile);
-        if (!status.ok()) {
-            std::cerr << "Erreur: impossible d'ouvrir le fichier Parquet" << std::endl;
+        auto infile_result = arrow::io::ReadableFile::Open(parquetFilePath);
+        if (!infile_result.ok()) {
+            std::cerr << "Error: unable to open Parquet file" << std::endl;
             return false;
         }
+        std::shared_ptr<arrow::io::ReadableFile> infile = infile_result.ValueOrDie();
 
-        std::unique_ptr<parquet::arrow::FileReader> reader;
-        status = parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader);
-        if (!status.ok()) {
+        auto reader_result = parquet::arrow::OpenFile(infile, arrow::default_memory_pool());
+        if (!reader_result.ok()) {
             return false;
         }
+        std::unique_ptr<parquet::arrow::FileReader> reader = std::move(reader_result.ValueOrDie());
 
         std::shared_ptr<arrow::Table> table;
-        status = reader->ReadTable(&table);
+        arrow::Status status = reader->ReadTable(&table);
         if (!status.ok()) {
             return false;
         }
 
-        std::string colName = columnName.empty() ? table->ColumnName(0) : columnName;
+        std::string colName = columnName.empty() ? table->schema()->field(0)->name() : columnName;
         std::shared_ptr<arrow::ChunkedArray> column = table->GetColumnByName(colName);
         if (!column) {
-            std::cerr << "Erreur: colonne '" << colName << "' introuvable" << std::endl;
+            std::cerr << "Error: column '" << colName << "' not found" << std::endl;
             return false;
         }
 
@@ -531,7 +531,7 @@ bool loadDatabaseFromParquet(Database& db,
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Erreur lors du chargement Parquet: " << e.what() << std::endl;
+        std::cerr << "Error loading Parquet: " << e.what() << std::endl;
         return false;
     }
 }
@@ -546,27 +546,27 @@ VLHEPIR createVLHEPIRFromParquet(const std::string& parquetFilePath,
                                 bool honestHint) {
     uint64_t N = countParquetLines(parquetFilePath, columnName);
     if (N == 0) {
-        std::cerr << "Erreur: aucune donnée trouvée dans le fichier Parquet" << std::endl;
+        std::cerr << "Error: no data found in Parquet file" << std::endl;
         exit(1);
     }
 
     if (!validateParquetColumnForD(parquetFilePath, d, columnName)) {
         entry_t maxValue = (entry_t(1) << d) - entry_t(1);
-        std::cerr << "Erreur: le fichier Parquet doit contenir uniquement des valeurs dans [0, " 
-                  << maxValue.toUnsignedLong() << "] pour d=" << d << std::endl;
+        std::cerr << "Error: Parquet file must contain only values in [0, " 
+                  << maxValue.toUnsignedLong() << "] for d=" << d << std::endl;
         exit(1);
     }
 
     if (verbose) {
         std::cout << "Parquet Analysis:" << std::endl;
-        std::cout << "  Nombre d'éléments (N): " << N << std::endl;
-        std::cout << "  Taille en bits (d): " << d << std::endl;
-        std::cout << "  Taille de la base: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
+        std::cout << "  Number of elements (N): " << N << std::endl;
+        std::cout << "  Bit size (d): " << d << std::endl;
+        std::cout << "  Database size: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
     }
 
     Database db(N, d);
     if (!loadDatabaseFromParquet(db, parquetFilePath, d, columnName)) {
-        std::cerr << "Erreur: échec du chargement du fichier Parquet" << std::endl;
+        std::cerr << "Error: Parquet file loading failed" << std::endl;
         exit(1);
     }
 
@@ -586,29 +586,29 @@ void printParquetStats(const std::string& parquetFilePath,
                       uint64_t d,
                       const std::string& columnName) {
     try {
-        std::shared_ptr<arrow::io::ReadableFile> infile;
-        arrow::Status status = arrow::io::ReadableFile::Open(parquetFilePath, &infile);
-        if (!status.ok()) {
-            std::cerr << "Erreur: impossible d'ouvrir le fichier Parquet" << std::endl;
+        auto infile_result = arrow::io::ReadableFile::Open(parquetFilePath);
+        if (!infile_result.ok()) {
+            std::cerr << "Error: unable to open Parquet file" << std::endl;
             return;
         }
+        std::shared_ptr<arrow::io::ReadableFile> infile = infile_result.ValueOrDie();
 
-        std::unique_ptr<parquet::arrow::FileReader> reader;
-        status = parquet::arrow::OpenFile(infile, arrow::default_memory_pool(), &reader);
-        if (!status.ok()) {
+        auto reader_result = parquet::arrow::OpenFile(infile, arrow::default_memory_pool());
+        if (!reader_result.ok()) {
             return;
         }
+        std::unique_ptr<parquet::arrow::FileReader> reader = std::move(reader_result.ValueOrDie());
 
         std::shared_ptr<arrow::Table> table;
-        status = reader->ReadTable(&table);
+        arrow::Status status = reader->ReadTable(&table);
         if (!status.ok()) {
             return;
         }
 
-        std::string colName = columnName.empty() ? table->ColumnName(0) : columnName;
+        std::string colName = columnName.empty() ? table->schema()->field(0)->name() : columnName;
         std::shared_ptr<arrow::ChunkedArray> column = table->GetColumnByName(colName);
         if (!column) {
-            std::cerr << "Erreur: colonne '" << colName << "' introuvable" << std::endl;
+            std::cerr << "Error: column '" << colName << "' not found" << std::endl;
             return;
         }
 
@@ -639,48 +639,48 @@ void printParquetStats(const std::string& parquetFilePath,
             }
         }
 
-        std::cout << "=== Statistiques Parquet ===" << std::endl;
-        std::cout << "Fichier: " << parquetFilePath << std::endl;
-        std::cout << "Colonne: " << colName << std::endl;
-        std::cout << "Nombre de lignes (N): " << N << std::endl;
-        std::cout << "Taille en bits (d): " << d << std::endl;
-        std::cout << "Valeur maximale autorisée: " << maxValue.toUnsignedLong() << std::endl;
+        std::cout << "=== Parquet Statistics ===" << std::endl;
+        std::cout << "File: " << parquetFilePath << std::endl;
+        std::cout << "Column: " << colName << std::endl;
+        std::cout << "Number of lines (N): " << N << std::endl;
+        std::cout << "Bit size (d): " << d << std::endl;
+        std::cout << "Maximum allowed value: " << maxValue.toUnsignedLong() << std::endl;
         if (minVal != UINT64_MAX) {
-            std::cout << "Valeur minimale trouvée: " << minVal << std::endl;
-            std::cout << "Valeur maximale trouvée: " << maxVal << std::endl;
+            std::cout << "Minimum value found: " << minVal << std::endl;
+            std::cout << "Maximum value found: " << maxVal << std::endl;
         }
-        std::cout << "Taille de la base: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
+        std::cout << "Database size: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
         std::cout << "===============================" << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "Erreur lors de l'analyse Parquet: " << e.what() << std::endl;
+        std::cerr << "Error during Parquet analysis: " << e.what() << std::endl;
     }
 }
 
 #else
 
-// Stubs lorsque Parquet n'est pas disponible
+// Stubs when Parquet is not available
 uint64_t countParquetLines(const std::string&, const std::string&) {
-    std::cerr << "Erreur: support Parquet non compilé. Installez Apache Arrow C++ et recompilez avec -DPARQUET_SUPPORT" << std::endl;
+    std::cerr << "Error: Parquet support not compiled. Install Apache Arrow C++ and recompile with -DPARQUET_SUPPORT" << std::endl;
     return 0;
 }
 
 bool validateParquetColumnForD(const std::string&, uint64_t, const std::string&) {
-    std::cerr << "Erreur: support Parquet non compilé" << std::endl;
+    std::cerr << "Error: Parquet support not compiled" << std::endl;
     return false;
 }
 
 bool loadDatabaseFromParquet(Database&, const std::string&, uint64_t, const std::string&, uint64_t) {
-    std::cerr << "Erreur: support Parquet non compilé" << std::endl;
+    std::cerr << "Error: Parquet support not compiled" << std::endl;
     return false;
 }
 
 VLHEPIR createVLHEPIRFromParquet(const std::string&, uint64_t, const std::string&, bool, bool, bool, uint64_t, bool) {
-    std::cerr << "Erreur: support Parquet non compilé" << std::endl;
+    std::cerr << "Error: Parquet support not compiled" << std::endl;
     exit(1);
 }
 
 void printParquetStats(const std::string&, uint64_t, const std::string&) {
-    std::cerr << "Erreur: support Parquet non compilé" << std::endl;
+    std::cerr << "Error: Parquet support not compiled" << std::endl;
 }
 
 #endif // PARQUET_SUPPORT
@@ -702,7 +702,7 @@ VLHEPIR createVLHEPIRFromFile(const std::string& filePath,
         case FileFormat::PARQUET:
             return createVLHEPIRFromParquet(filePath, d, columnName, allowTrivial, verbose, simplePIR, batchSize, honestHint);
         default:
-            std::cerr << "Erreur: format de fichier non reconnu. Formats supportés: .csv, .parquet" << std::endl;
+            std::cerr << "Error: unrecognized file format. Supported formats: .csv, .parquet" << std::endl;
             exit(1);
     }
 }

@@ -34,7 +34,7 @@ LDFLAGS  += $(if $(OPENSSL_LIBS),$(OPENSSL_LIBS),-lssl -lcrypto)
 # ============================================================================
 # Support Parquet (optionnel, activé si PARQUET_SUPPORT=1 et pkg-config ok)
 # ============================================================================
-PARQUET_SUPPORT ?= 0
+PARQUET_SUPPORT ?= 1
 ifeq ($(PARQUET_SUPPORT),1)
     ARROW_CFLAGS  := $(shell $(PKG_CONFIG) --cflags arrow parquet 2>/dev/null)
     ARROW_LIBS    := $(shell $(PKG_CONFIG) --libs arrow parquet 2>/dev/null)

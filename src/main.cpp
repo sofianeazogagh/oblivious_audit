@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 
-// Fonction pour afficher une valeur entry_t
+// Function to print an entry_t value
 void printEntry(const entry_t& val) {
     std::cout << val.toUnsignedLong();
 }
@@ -12,18 +12,18 @@ int main(int argc, char* argv[]) {
     // ========================================================================
     // 1. Configuration
     // ========================================================================
-    // Précision de la base de données en bits
-    const uint64_t d = 2;
+    // Database precision in bits
+    const uint64_t d = 1;
     
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <data_file> [query_index] [column_name]" << std::endl;
-        std::cerr << "  data_file: chemin vers le fichier CSV ou Parquet contenant une colonne de valeurs numériques" << std::endl;
-        std::cerr << "  query_index: index de l'élément à récupérer (défaut: 0)" << std::endl;
-        std::cerr << "  column_name: nom de la colonne (optionnel, pour Parquet uniquement)" << std::endl;
+        std::cerr << "  data_file: path to CSV or Parquet file containing a column of numeric values" << std::endl;
+        std::cerr << "  query_index: index of element to retrieve (default: 0)" << std::endl;
+        std::cerr << "  column_name: column name (optional, for Parquet only)" << std::endl;
         std::cerr << std::endl;
-        std::cerr << "Note: La précision d=" << d << " bits est définie dans le code source." << std::endl;
-        std::cerr << "      Valeurs valides: [0, " << ((1ULL << d) - 1) << "]" << std::endl;
-        std::cerr << "      Formats supportés: .csv, .parquet" << std::endl;
+        std::cerr << "Note: Precision d=" << d << " bits is defined in the source code." << std::endl;
+        std::cerr << "      Valid values: [0, " << ((1ULL << d) - 1) << "]" << std::endl;
+        std::cerr << "      Supported formats: .csv, .parquet" << std::endl;
         return 1;
     }
     
@@ -31,30 +31,30 @@ int main(int argc, char* argv[]) {
     const uint64_t queryIndex = (argc > 2) ? std::stoull(argv[2]) : 0;
     const std::string columnName = (argc > 3) ? argv[3] : "";
     
-    // Détecter le format du fichier
+    // Detect file format
     FileFormat format = detectFileFormat(dataFile);
     
     if (format == FileFormat::UNKNOWN) {
-        std::cerr << "Erreur: format de fichier non reconnu. Formats supportés: .csv, .parquet" << std::endl;
+        std::cerr << "Error: unrecognized file format. Supported formats: .csv, .parquet" << std::endl;
         return 1;
     }
     
     std::cout << "========================================" << std::endl;
-    std::cout << "  VLHEPIR avec " << (format == FileFormat::PARQUET ? "Parquet" : "CSV") << std::endl;
+    std::cout << "  VLHEPIR with " << (format == FileFormat::PARQUET ? "Parquet" : "CSV") << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Fichier: " << dataFile << std::endl;
+    std::cout << "File: " << dataFile << std::endl;
     std::cout << "Format: " << (format == FileFormat::PARQUET ? "Parquet" : "CSV") << std::endl;
-    std::cout << "Précision (d): " << d << " bits" << std::endl;
-    std::cout << "Index de requête: " << queryIndex << std::endl;
+    std::cout << "Precision (d): " << d << " bits" << std::endl;
+    std::cout << "Query index: " << queryIndex << std::endl;
     if (!columnName.empty()) {
-        std::cout << "Colonne: " << columnName << std::endl;
+        std::cout << "Column: " << columnName << std::endl;
     }
     std::cout << std::endl;
     
     // ========================================================================
-    // 2. Analyser le fichier
+    // 2. Analyze the file
     // ========================================================================
-    std::cout << "=== Analyse du fichier ===" << std::endl;
+    std::cout << "=== File Analysis ===" << std::endl;
     if (format == FileFormat::PARQUET) {
         printParquetStats(dataFile, d, columnName);
     } else {
@@ -63,16 +63,16 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
     
     // ========================================================================
-    // 3. Créer le PIR depuis le fichier
+    // 3. Create PIR from file
     // ========================================================================
     std::cout << "=== Parameters instantiation ===" << std::endl;
     VLHEPIR pir = createVLHEPIRFromFile(
         dataFile,
-        d,          // précision en bits
-        columnName, // nom de la colonne (pour Parquet)
-        true,       // hasHeader (pour CSV)
+        d,          // precision in bits
+        columnName, // column name (for Parquet)
+        true,       // hasHeader (for CSV)
         true,       // allowTrivial
-        false,      // verbose (mettre à true pour voir l'optimisation détaillée)
+        false,      // verbose (set to true to see detailed optimization)
         false,      // simplePIR
         1,          // batchSize
         false       // honestHint
@@ -83,119 +83,119 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
     
     // ========================================================================
-    // 4. Préparer la base de données pour les requêtes
+    // 4. Prepare database for queries
     // ========================================================================
-    std::cout << "=== Préparation de la base de données ===" << std::endl;
-    // D'abord, packer les données de la base dans une matrice
+    std::cout << "=== Database Preparation ===" << std::endl;
+    // First, pack database data into a matrix
     Matrix D = pir.db.packDataInMatrix(pir.dbParams, true);
-    std::cout << "Base de données packée en matrice D (dimensions: " 
+    std::cout << "Database packed into matrix D (dimensions: " 
               << D.rows << " x " << D.cols << ")" << std::endl;
     
-    // Ensuite, packer la matrice pour l'optimisation
+    // Then, pack the matrix for optimization
     PackedMatrix D_packed = packMatrixHardCoded(D, pir.lhe.p);
-    std::cout << "Matrice D packée (dimensions: " 
+    std::cout << "Matrix D packed (dimensions: " 
               << D_packed.mat.rows << " x " << D_packed.mat.cols << ")" << std::endl;
     std::cout << std::endl;
     
     // ========================================================================
-    // 5. Phase Offline (peut être faite une seule fois)
+    // 5. Offline Phase (can be done once)
     // ========================================================================
-    std::cout << "=== Phase Offline ===" << std::endl;
+    std::cout << "=== Offline Phase ===" << std::endl;
     
-    // Générer la matrice publique A
+    // Generate public matrix A
     Matrix A = pir.Init();
-    std::cout << "Matrice publique A générée" << std::endl;
+    std::cout << "Public matrix A generated" << std::endl;
     
-    // Générer le hint H avec la vraie matrice D (nécessaire pour Recover)
+    // Generate hint H with the real matrix D (needed for Recover)
     Matrix H = pir.GenerateHint(A, D);
-    std::cout << "Hint H généré" << std::endl;
-    std::cout << "Taille du hint: " 
+    std::cout << "Hint H generated" << std::endl;
+    std::cout << "Hint size: " 
               << H.rows * H.cols * sizeof(Elem) / (1ULL << 20) 
               << " MiB" << std::endl;
     
-    // Hasher A et H pour la génération de la preuve (nécessaire pour la vérification)
+    // Hash A and H for proof generation (needed for verification)
     unsigned char hash[SHA256_DIGEST_LENGTH];
     pir.HashAandH(hash, A, H);
     
     std::cout << std::endl;
     
     // ========================================================================
-    // 6. Phase Online - Générer la requête
+    // 6. Online Phase - Generate query
     // ========================================================================
-    std::cout << "=== Phase Online - Requête ===" << std::endl;
+    std::cout << "=== Online Phase - Query ===" << std::endl;
     
     if (queryIndex >= pir.N) {
-        std::cerr << "Erreur: index " << queryIndex 
-                  << " hors limites (max: " << (pir.N - 1) << ")" << std::endl;
+        std::cerr << "Error: index " << queryIndex 
+                  << " out of bounds (max: " << (pir.N - 1) << ")" << std::endl;
         return 1;
     }
     
-    // Valeur attendue (pour vérification)
+    // Expected value (for verification)
     entry_t expectedValue = pir.db.getDataAtIndex(queryIndex);
-    std::cout << "Valeur attendue à l'index " << queryIndex << ": ";
+    std::cout << "Expected value at index " << queryIndex << ": ";
     printEntry(expectedValue);
     std::cout << std::endl;
     
-    // Générer la requête
+    // Generate query
     
     auto ct_sk = pir.Query(A, queryIndex);
-    Matrix ct = std::get<0>(ct_sk);  // Ciphertext (requête chiffrée)
-    Matrix sk = std::get<1>(ct_sk);  // Secret key (pour déchiffrer)
+    Matrix ct = std::get<0>(ct_sk);  // Ciphertext (encrypted query)
+    Matrix sk = std::get<1>(ct_sk);  // Secret key (for decryption)
     
-    std::cout << "Requête générée pour l'index " << queryIndex << std::endl;
-    std::cout << "Taille de la requête: " 
+    std::cout << "Query generated for index " << queryIndex << std::endl;
+    std::cout << "Query size: " 
               << ct.rows * ct.cols * sizeof(Elem) / 1024.0 
               << " KiB" << std::endl;
     std::cout << std::endl;
     
     // ========================================================================
-    // 7. Phase Online - Générer la réponse (côté serveur)
+    // 7. Online Phase - Generate answer (server side)
     // ========================================================================
-    std::cout << "=== Phase Online - Réponse ===" << std::endl;
+    std::cout << "=== Online Phase - Answer ===" << std::endl;
     
     Matrix ans = pir.Answer(ct, D_packed);
-    std::cout << "Réponse générée" << std::endl;
-    std::cout << "Taille de la réponse: " 
+    std::cout << "Answer generated" << std::endl;
+    std::cout << "Answer size: " 
               << ans.rows * ans.cols * sizeof(Elem) / 1024.0 
               << " KiB" << std::endl;
     std::cout << std::endl;
     
     // ========================================================================
-    // 8. Phase Online - Vérification
+    // 8. Online Phase - Verification
     // ========================================================================
-    std::cout << "=== Phase Online - Vérification ===" << std::endl;
+    std::cout << "=== Online Phase - Verification ===" << std::endl;
     
-    // Générer la preuve Z de manière réelle
+    // Generate proof Z for real
     Matrix Z = pir.Prove(hash, ct, ans, D_packed);
     
-    // Vérifier la preuve avec Verify (vraie vérification avec fake=false)
+    // Verify proof with Verify (real verification with fake=false)
     pir.Verify(A, H, hash, ct, ans, Z, false);
-    std::cout << "Vérification réussie ✓" << std::endl;
+    std::cout << "Verification successful ✓" << std::endl;
     std::cout << std::endl;
     
     // ========================================================================
-    // 9. Phase Online - Récupération du résultat (côté client)
+    // 9. Online Phase - Result recovery (client side)
     // ========================================================================
-    std::cout << "=== Phase Online - Récupération ===" << std::endl;
+    std::cout << "=== Online Phase - Recovery ===" << std::endl;
     
     entry_t result = pir.Recover(H, ans, sk, queryIndex);
     
-    std::cout << "Résultat récupéré: ";
+    std::cout << "Recovered result: ";
     printEntry(result);
     std::cout << std::endl;
     
     // ========================================================================
-    // 10. Vérification
+    // 10. Verification
     // ========================================================================
     std::cout << std::endl;
-    std::cout << "=== Vérification ===" << std::endl;
+    std::cout << "=== Verification ===" << std::endl;
     if (result == expectedValue) {
-        std::cout << "✓ Succès! La valeur récupérée correspond à la valeur attendue." 
+        std::cout << "✓ Success! Recovered value matches expected value." 
                   << std::endl;
     } else {
-        std::cout << "✗ Erreur! Valeur attendue: ";
+        std::cout << "✗ Error! Expected value: ";
         printEntry(expectedValue);
-        std::cout << ", Valeur récupérée: ";
+        std::cout << ", Recovered value: ";
         printEntry(result);
         std::cout << std::endl;
         return 1;
@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "  Requête PIR complétée avec succès!" << std::endl;
+    std::cout << "  PIR query completed successfully!" << std::endl;
     std::cout << "========================================" << std::endl;
     
     return 0;

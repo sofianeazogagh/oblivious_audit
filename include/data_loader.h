@@ -7,35 +7,35 @@
 #include <cstdint>
 
 // ============================================================================
-// Fonctions utilitaires
+// Utility functions
 // ============================================================================
 
 /**
- * Compte le nombre de lignes dans un fichier CSV (sans l'en-tête)
+ * Counts the number of lines in a CSV file (excluding header)
  */
 uint64_t countCSVLines(const std::string& csvFilePath, bool hasHeader = true);
 
 /**
- * Détermine la taille en bits nécessaire pour stocker une valeur
+ * Determines the bit size needed to store a value
  */
 uint64_t calculateBitSize(uint64_t value);
 
 /**
- * Vérifie que toutes les valeurs dans la colonne sont valides pour d bits
- * Si d=1, vérifie que les valeurs sont 0 ou 1
- * Sinon, vérifie que les valeurs sont dans [0, 2^d-1]
+ * Verifies that all values in the column are valid for d bits
+ * If d=1, checks that values are 0 or 1
+ * Otherwise, checks that values are in [0, 2^d-1]
  */
 bool validateColumnForD(const std::string& csvFilePath, 
                         uint64_t d,
                         bool hasHeader = true);
 
 // ============================================================================
-// Fonctions de chargement dans Database
+// Database loading functions
 // ============================================================================
 
 /**
- * Charge les données d'une colonne CSV dans une Database
- * Les valeurs doivent être dans [0, 2^d-1]
+ * Loads CSV column data into a Database
+ * Values must be in [0, 2^d-1]
  */
 bool loadDatabaseFromCSV(Database& db,
                          const std::string& csvFilePath,
@@ -44,12 +44,12 @@ bool loadDatabaseFromCSV(Database& db,
                          uint64_t maxRows = 0);
 
 // ============================================================================
-// Fonctions de création de PIR depuis CSV
+// PIR creation functions from CSV
 // ============================================================================
 
 /**
- * Crée un VLHEPIR à partir d'un fichier CSV
- * Détermine automatiquement N, d doit être spécifié
+ * Creates a VLHEPIR from a CSV file
+ * Automatically determines N, d must be specified
  */
 VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
                              uint64_t d,
@@ -61,30 +61,30 @@ VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
                              bool honestHint = false);
 
 /**
- * Affiche des statistiques sur un fichier CSV
+ * Prints statistics about a CSV file
  */
 void printCSVStats(const std::string& csvFilePath,
                    uint64_t d,
                    bool hasHeader = true);
 
 // ============================================================================
-// Fonctions pour fichiers Parquet
+// Functions for Parquet files
 // ============================================================================
 
 /**
- * Compte le nombre de lignes dans un fichier Parquet
+ * Counts the number of lines in a Parquet file
  */
 uint64_t countParquetLines(const std::string& parquetFilePath, const std::string& columnName = "");
 
 /**
- * Vérifie que toutes les valeurs dans la colonne Parquet sont valides pour d bits
+ * Verifies that all values in the Parquet column are valid for d bits
  */
 bool validateParquetColumnForD(const std::string& parquetFilePath,
                                uint64_t d,
                                const std::string& columnName = "");
 
 /**
- * Charge les données d'une colonne Parquet dans une Database
+ * Loads Parquet column data into a Database
  */
 bool loadDatabaseFromParquet(Database& db,
                              const std::string& parquetFilePath,
@@ -93,7 +93,7 @@ bool loadDatabaseFromParquet(Database& db,
                              uint64_t maxRows = 0);
 
 /**
- * Crée un VLHEPIR à partir d'un fichier Parquet
+ * Creates a VLHEPIR from a Parquet file
  */
 VLHEPIR createVLHEPIRFromParquet(const std::string& parquetFilePath,
                                  uint64_t d,
@@ -105,20 +105,20 @@ VLHEPIR createVLHEPIRFromParquet(const std::string& parquetFilePath,
                                  bool honestHint = false);
 
 /**
- * Affiche des statistiques sur un fichier Parquet
+ * Prints statistics about a Parquet file
  */
 void printParquetStats(const std::string& parquetFilePath,
                       uint64_t d,
                       const std::string& columnName = "");
 
 /**
- * Détecte le format du fichier (CSV ou Parquet)
+ * Detects the file format (CSV or Parquet)
  */
 enum class FileFormat { CSV, PARQUET, UNKNOWN };
 FileFormat detectFileFormat(const std::string& filePath);
 
 /**
- * Crée un VLHEPIR à partir d'un fichier (détection automatique du format)
+ * Creates a VLHEPIR from a file (automatic format detection)
  */
 VLHEPIR createVLHEPIRFromFile(const std::string& filePath,
                               uint64_t d,
