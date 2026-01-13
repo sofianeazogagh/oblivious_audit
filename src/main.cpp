@@ -1,6 +1,4 @@
 #include "csv_loader.h"
-#include "pir/preproc_pir.h"
-#include "pir/pir.h"
 #include <openssl/sha.h>
 #include <iostream>
 #include <iomanip>
@@ -31,7 +29,7 @@ int main(int argc, char* argv[]) {
     const uint64_t queryIndex = (argc > 2) ? std::stoull(argv[2]) : 0;
     
     std::cout << "========================================" << std::endl;
-    std::cout << "  VeriSimplePIR avec CSV" << std::endl;
+    std::cout << "  VLHEPIR avec CSV" << std::endl;
     std::cout << "========================================" << std::endl;
     std::cout << "Fichier CSV: " << csvFile << std::endl;
     std::cout << "Précision (d): " << d << " bits" << std::endl;
@@ -49,28 +47,20 @@ int main(int argc, char* argv[]) {
     // 3. Créer le PIR depuis le CSV
     // ========================================================================
     std::cout << "=== Parameters instantiation ===" << std::endl;
-    VeriSimplePIR pir = createPIRFromCSV(
+    VLHEPIR pir = createVLHEPIRFromCSV(
         csvFile,
         d,          // précision en bits
         true,       // hasHeader
         true,       // allowTrivial
         false,      // verbose (mettre à true pour voir l'optimisation détaillée)
-        true,       // preprocessed
+        false,      // simplePIR
+        1,          // batchSize
         false       // honestHint
     );
     
     std::cout << "Database parameters: ";
     pir.dbParams.print();
     std::cout << std::endl;
-    
-    // Créer une instance VLHEPIR pour la vérification (nécessaire pour générer Z et C)
-    // car VeriSimplePIR n'a pas de fonction Prove pour la phase online
-    VLHEPIR vlhe_pir(pir.N, pir.d, true, false, false, false, 1, false);
-    // Synchroniser les paramètres avec VeriSimplePIR
-    vlhe_pir.m = pir.m;
-    vlhe_pir.ell = pir.ell;
-    vlhe_pir.lhe = pir.lhe;
-    vlhe_pir.dbParams = pir.dbParams;
     
     // ========================================================================
     // 4. Préparer la base de données pour les requêtes
@@ -105,7 +95,7 @@ int main(int argc, char* argv[]) {
     
     // Hasher A et H pour la génération de la preuve (nécessaire pour la vérification)
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    vlhe_pir.HashAandH(hash, A, H);
+    pir.HashAandH(hash, A, H);
     
     std::cout << std::endl;
     
@@ -151,17 +141,16 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
     
     // ========================================================================
-    // 8. Phase Online - Vérification (optionnelle pour VeriSimplePIR)
+    // 8. Phase Online - Vérification
     // ========================================================================
     std::cout << "=== Phase Online - Vérification ===" << std::endl;
     
-    // Générer la preuve Z et la matrice binaire C de manière réelle
-    Matrix Z = vlhe_pir.Prove(hash, ct, ans, D_packed);
-    BinaryMatrix C = vlhe_pir.HashToC(hash, ct, ans);
+    // Générer la preuve Z de manière réelle
+    Matrix Z = pir.Prove(hash, ct, ans, D_packed);
     
-    // Utiliser PreVerify avec fake=false pour la vraie vérification
-    pir.PreVerify(ct, ans, Z, C, false);
-    std::cout << "Vérification réussie " << std::endl;
+    // Vérifier la preuve avec Verify (vraie vérification avec fake=false)
+    pir.Verify(A, H, hash, ct, ans, Z, false);
+    std::cout << "Vérification réussie ✓" << std::endl;
     std::cout << std::endl;
     
     // ========================================================================

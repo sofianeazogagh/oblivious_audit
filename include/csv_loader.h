@@ -2,7 +2,7 @@
 #define CSV_LOADER_H
 
 #include "pir/database.h"
-#include "pir/preproc_pir.h"
+#include "pir/pir.h"
 #include <string>
 #include <cstdint>
 
@@ -48,16 +48,17 @@ bool loadDatabaseFromCSV(Database& db,
 // ============================================================================
 
 /**
- * Crée un VeriSimplePIR à partir d'un fichier CSV
+ * Crée un VLHEPIR à partir d'un fichier CSV
  * Détermine automatiquement N, d doit être spécifié
  */
-VeriSimplePIR createPIRFromCSV(const std::string& csvFilePath,
-                               uint64_t d,
-                               bool hasHeader = true,
-                               bool allowTrivial = true,
-                               bool verbose = false,
-                               bool preprocessed = true,
-                               bool honestHint = false);
+VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
+                             uint64_t d,
+                             bool hasHeader = true,
+                             bool allowTrivial = true,
+                             bool verbose = false,
+                             bool simplePIR = false,
+                             uint64_t batchSize = 1,
+                             bool honestHint = false);
 
 /**
  * Affiche des statistiques sur un fichier CSV

@@ -1,6 +1,5 @@
 #include "csv_loader.h"
 #include "pir/database.h"
-#include "pir/preproc_pir.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -217,13 +216,14 @@ bool loadDatabaseFromCSV(Database& db,
  * Crée un VeriSimplePIR à partir d'un fichier CSV
  * Détermine automatiquement N, d doit être spécifié
  */
-VeriSimplePIR createPIRFromCSV(const std::string& csvFilePath,
-                               uint64_t d,
-                               bool hasHeader,
-                               bool allowTrivial,
-                               bool verbose,
-                               bool preprocessed,
-                               bool honestHint) {
+VLHEPIR createVLHEPIRFromCSV(const std::string& csvFilePath,
+                             uint64_t d,
+                             bool hasHeader,
+                             bool allowTrivial,
+                             bool verbose,
+                             bool simplePIR,
+                             uint64_t batchSize,
+                             bool honestHint) {
     // 1. Compter le nombre de lignes
     uint64_t N = countCSVLines(csvFilePath, hasHeader);
     if (N == 0) {
@@ -256,14 +256,13 @@ VeriSimplePIR createPIRFromCSV(const std::string& csvFilePath,
     }
     
     // 5. Créer le PIR
-    VeriSimplePIR pir(
+    VLHEPIR pir(
         N, d,
         allowTrivial,
         verbose,
-        false,      // simplePIR
+        simplePIR,
         false,      // randomData = false (on charge depuis CSV)
-        1,          // batch size
-        preprocessed,
+        batchSize,
         honestHint
     );
     
