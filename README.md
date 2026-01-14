@@ -1,6 +1,6 @@
 # Oblivious Audit
 
-Project using VeriSimplePIR to perform PIR (Private Information Retrieval) queries on CSV or Parquet files. This project allows retrieving database elements privately without revealing which element is being accessed.
+Project using VeriSimplePIR to perform PIR (Private Information Retrieval) queries for an audit model purpose.
 
 ## Prerequisites
 
