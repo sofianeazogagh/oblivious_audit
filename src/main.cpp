@@ -287,8 +287,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Public matrix A generated" << std::endl;
     
     // Generate hint H with the real matrix D (needed for Recover)
-    // Matrix H = pir.GenerateHint(A, D);
-    Matrix H = pir.GenerateFakeHint();
+    Matrix H = pir.GenerateHint(A, D);
+    // Matrix H = pir.GenerateFakeHint();
     std::cout << "Hint H generated" << std::endl;
     std::cout << "Hint size: " 
               << H.rows * H.cols * sizeof(Elem) / (1ULL << 20) 

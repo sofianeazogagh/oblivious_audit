@@ -160,78 +160,10 @@ The program will automatically use the first numeric column found.
 
 ### Parquet File Format
 
-For Parquet files, you must specify the column name to use:
+For Parquet files, you can specify the column name to use:
 
 ```bash
 ./bin/pir data/database.parquet 0 column_name
-```
-
-## How It Works
-
-The program performs the following steps:
-
-1. **File Analysis**: Detects the format (CSV or Parquet) and analyzes the data
-2. **Parameter Instantiation**: Configures PIR parameters based on the database size
-3. **Database Preparation**: Prepares the data matrix for queries
-4. **Offline Phase**: Generates the public matrix A and hint H
-5. **Online Phase - Query**: Generates the encrypted query for the requested index
-6. **Online Phase - Answer**: Generates the server response
-7. **Online Phase - Recovery**: Decrypts the response to obtain the requested value
-8. **Verification**: Compares the recovered value with the expected value (if available)
-
-## Cleaning
-
-To remove compiled files from the main project:
-
-```bash
-make clean
-```
-
-To also clean VeriSimplePIR build files:
-
-```bash
-make clean-all
-```
-
-## Troubleshooting
-
-### Error: "VeriSimplePIR library not found"
-
-The Makefile should automatically build VeriSimplePIR. If you encounter this error, try:
-
-```bash
-make verisimplepir
-```
-
-If the error persists, ensure the VeriSimplePIR directory exists in the project root.
-
-### Error: "unrecognized file format"
-
-Check that your file has the `.csv` or `.parquet` extension and that the format is correct.
-
-### Error: "index out of bounds"
-
-The query index must be less than the number of elements in the database. Check your file size.
-
-### Compilation Issues on macOS
-
-If you encounter issues with library paths on macOS, the Makefile automatically configures paths using `install_name_tool`.
-
-## Project Structure
-
-```
-oblivious_audit/
-├── bin/                    # Compiled executables
-│   └── pir
-├── build/                  # Compilation object files
-├── data/                   # Data files (CSV, Parquet)
-├── include/                # Header files
-│   └── data_loader.h
-├── src/                    # Source code
-│   ├── data_loader.cpp
-│   └── main.cpp
-├── VeriSimplePIR/          # VeriSimplePIR library
-└── Makefile               # Build file
 ```
 
 ## References
