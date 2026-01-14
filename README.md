@@ -88,10 +88,10 @@ make PARQUET_SUPPORT=0
 ### General Syntax
 
 ```bash
-./bin/pir <data_file> [query_index] [column_name]
+./bin/pir <data_file> [query_index]
 ```
 
-or to generate a random database:
+or to generate a random database (much faster):
 
 ```bash
 ./bin/pir --generate <N> <d> [query_index]
@@ -103,7 +103,6 @@ or to generate a random database:
 - **`<N>`**: Number of elements in the database (can be a number like `1024` or a power of 2 like `2^10` or `2**20`)
 - **`<d>`**: Number of bits per element (values in `[0, 2^d-1]`)
 - **`[query_index]`**: Index of the element to retrieve (default: 0)
-- **`[column_name]`**: Column name (optional, for Parquet files only)
 
 ### Examples
 
