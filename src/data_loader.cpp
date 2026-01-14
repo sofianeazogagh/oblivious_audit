@@ -1,5 +1,7 @@
 #include "data_loader.h"
 #include "pir/database.h"
+#include "pir/mat.h"
+#include "pir/mat_packed.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -705,4 +707,39 @@ VLHEPIR createVLHEPIRFromFile(const std::string& filePath,
             std::cerr << "Error: unrecognized file format. Supported formats: .csv, .parquet" << std::endl;
             exit(1);
     }
+}
+
+// ============================================================================
+// Functions for generating random databases
+// ============================================================================
+
+VLHEPIR createVLHEPIRFromRandomData(uint64_t N,
+                                    uint64_t d,
+                                    bool allowTrivial,
+                                    bool verbose,
+                                    bool simplePIR,
+                                    uint64_t batchSize,
+                                    bool honestHint) {
+    if (N == 0) {
+        std::cerr << "Error: N must be greater than 0" << std::endl;
+        exit(1);
+    }
+    
+    if (verbose) {
+        std::cout << "Random database generation:" << std::endl;
+        std::cout << "  Number of elements (N): " << N << std::endl;
+        std::cout << "  Number of bits (d): " << d << std::endl;
+        uint64_t maxValue = (1ULL << d) - 1;
+        std::cout << "  Values in [0, " << maxValue << "]" << std::endl;
+        std::cout << "  Database size: " << (N * d) / (8.0 * (1ULL << 20)) << " MiB" << std::endl;
+    }
+    
+    // Create PIR with randomData=false to avoid allocating the complete Database
+    // We will create the packed matrix directly as in the benchmark
+    VLHEPIR pir(N, d, allowTrivial, verbose, simplePIR, false, batchSize, honestHint);
+    
+    // Note: We do NOT create the complete Database here to save memory
+    // The packed matrix will be created directly in main.cpp as in pir_bench.cpp
+    
+    return pir;
 }

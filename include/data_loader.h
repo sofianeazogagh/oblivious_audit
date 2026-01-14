@@ -130,4 +130,21 @@ VLHEPIR createVLHEPIRFromFile(const std::string& filePath,
                               uint64_t batchSize = 1,
                               bool honestHint = false);
 
+// ============================================================================
+// Functions for generating random databases
+// ============================================================================
+
+/**
+ * Creates a VLHEPIR from a randomly generated database
+ * (no file, in-memory generation)
+ * Values are generated in [0, 2^d-1] using random_fast
+ */
+VLHEPIR createVLHEPIRFromRandomData(uint64_t N,
+                                    uint64_t d,
+                                    bool allowTrivial = true,
+                                    bool verbose = false,
+                                    bool simplePIR = false,
+                                    uint64_t batchSize = 1,
+                                    bool honestHint = false);
+
 #endif // DATA_LOADER_H
