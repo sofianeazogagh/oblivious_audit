@@ -65,7 +65,7 @@ The executable will be created at `bin/pir`.
 
 **Note:** The first time you run `make`, it will automatically compile VeriSimplePIR (which may take a few minutes). Subsequent builds will be faster as VeriSimplePIR will only be rebuilt if needed.
 
-### Optional: Build VeriSimplePIR Separately
+<!-- ### Optional: Build VeriSimplePIR Separately
 
 If you want to build VeriSimplePIR separately:
 
@@ -73,15 +73,8 @@ If you want to build VeriSimplePIR separately:
 make verisimplepir
 ```
 
-The compiled library will be located at `VeriSimplePIR/bin/lib/libverisimplepir.dylib` (macOS) or `VeriSimplePIR/bin/lib/libverisimplepir.so` (Linux).
+The compiled library will be located at `VeriSimplePIR/bin/lib/libverisimplepir.dylib` (macOS) or `VeriSimplePIR/bin/lib/libverisimplepir.so` (Linux). -->
 
-### Optional Configuration
-
-If you want to disable Parquet support (enabled by default if available):
-
-```bash
-make PARQUET_SUPPORT=0
-```
 
 ## Usage
 
@@ -143,28 +136,6 @@ or
 ```
 
 Generates a database of 2^10 = 1024 elements (or 2^20 = 1048576) with 8 bits per element and retrieves the element at index 42.
-
-### CSV File Format
-
-CSV files must contain a column of numeric values. By default, the program assumes the first line is a header.
-
-Example CSV file (`data/test.csv`):
-```csv
-id,value,description
-0,42,first_element
-1,100,second_element
-2,255,third_element
-```
-
-The program will automatically use the first numeric column found.
-
-### Parquet File Format
-
-For Parquet files, you can specify the column name to use:
-
-```bash
-./bin/pir data/database.parquet 0 column_name
-```
 
 ## References
 
