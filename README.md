@@ -2,6 +2,27 @@
 
 Project using VeriSimplePIR to perform PIR (Private Information Retrieval) queries for an audit model purpose.
 
+## Getting Started
+
+### Cloning the Repository
+
+To clone this repository with all submodules in one command:
+
+```bash
+git clone --recursive git@github.com:sofianeazogagh/oblivious_audit.git
+cd oblivious_audit
+```
+
+Alternatively, if you've already cloned the repository without submodules:
+
+```bash
+git clone git@github.com:sofianeazogagh/oblivious_audit.git
+cd oblivious_audit
+git submodule update --init --recursive
+```
+
+**Note:** This project uses VeriSimplePIR as a git submodule. Make sure to initialize submodules before building the project.
+
 ## Prerequisites
 
 ### Operating System
@@ -30,26 +51,6 @@ brew install openssl pkg-config
   - On Ubuntu: `sudo apt install libarrow-dev libparquet-dev`
   - On macOS: `brew install apache-arrow`
 
-## Getting Started
-
-### Cloning the Repository
-
-To clone this repository with all submodules in one command:
-
-```bash
-git clone --recursive git@github.com:sofianeazogagh/oblivious_audit.git
-cd oblivious_audit
-```
-
-Alternatively, if you've already cloned the repository without submodules:
-
-```bash
-git clone git@github.com:sofianeazogagh/oblivious_audit.git
-cd oblivious_audit
-git submodule update --init --recursive
-```
-
-**Note:** This project uses VeriSimplePIR as a git submodule. Make sure to initialize submodules before building the project.
 
 ## Installation
 

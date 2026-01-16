@@ -54,6 +54,8 @@ endif
 LDFLAGS += -L$(VERISIMPLEPIR_DIR)/bin/lib -Wl,-rpath,$(VERISIMPLEPIR_DIR)/bin/lib -lverisimplepir
 ifeq ($(UNAME_S),Darwin)
     LDFLAGS += -lc++
+else
+    LDFLAGS += -lstdc++ -lm
 endif
 LIBSUFFIX := $(if $(filter $(UNAME_S),Darwin),.dylib,.so)
 EXESUFFIX :=
