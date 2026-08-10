@@ -15,8 +15,12 @@ VERISIMPLEPIR_INC := $(VERISIMPLEPIR_DIR)/src/lib
 # ============================================================================
 # Compiler configuration (portable)
 # ============================================================================
-CC ?= clang++
-CPPFLAGS += -std=c++17 -O3 -Wall -fno-omit-frame-pointer
+# `CC ?=` would be ignored, since make always defines CC (to `cc`) itself.
+ifeq ($(origin CC),default)
+    CC := clang++
+endif
+# C++20 is required by the Arrow headers used for the optional Parquet support.
+CPPFLAGS += -std=c++20 -O3 -Wall -fno-omit-frame-pointer
 # Reduce warning noise
 CPPFLAGS += -Wno-unused-variable -Wno-unused-parameter -Wno-unused-const-variable -Wno-unused-local-typedef -Wno-deprecated-declarations
 
@@ -101,7 +105,8 @@ directories:
 # Link the executable
 $(TARGET): $(OBJECTS) $(VERISIMPLEPIR_LIB)$(LIBSUFFIX)
 	@echo "$(COLOR_CYAN)Linking $(TARGET)...$(COLOR_RESET)"
-	@$(CC) -o $@ $(OBJECTS) $(LDFLAGS) 2>&1 | grep -vE "(warning:|note:)" || true
+	@$(CC) -o $@ $(OBJECTS) $(LDFLAGS) 2> $(BUILDDIR)/link.log || \
+		{ grep -vE "(warning:|note:)" $(BUILDDIR)/link.log; exit 1; }
 ifeq ($(UNAME_S),Darwin)
 	@echo "$(COLOR_CYAN)Fixing library path...$(COLOR_RESET)"
 	@install_name_tool -change bin/lib/libverisimplepir.dylib $(VERISIMPLEPIR_DIR)/bin/lib/libverisimplepir.dylib $@ 2>/dev/null || true
@@ -113,7 +118,8 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo "$(COLOR_BLUE)Compiling $(COLOR_BOLD)$<$(COLOR_RESET)$(COLOR_BLUE)...$(COLOR_RESET)"
 	@mkdir -p $(@D)
 	@$(CC) $(CPPFLAGS) -I$(INCDIR) -MM -MT $@ $< > $(BUILDDIR)/$*.d 2>/dev/null
-	@$(CC) $(CPPFLAGS) -I$(INCDIR) -c -o $@ $< 2>&1 | grep -vE "(warning:|generated|note:|^[[:space:]]*[0-9]+ warnings generated)" || true
+	@$(CC) $(CPPFLAGS) -I$(INCDIR) -c -o $@ $< 2> $(BUILDDIR)/$*.log || \
+		{ grep -vE "(warning:|generated|note:|^[[:space:]]*[0-9]+ warnings generated)" $(BUILDDIR)/$*.log; exit 1; }
 
 # Compile VeriSimplePIR if necessary
 verisimplepir: $(VERISIMPLEPIR_LIB)$(LIBSUFFIX)
@@ -133,6 +139,11 @@ $(VERISIMPLEPIR_LIB)$(LIBSUFFIX):
 		unset LDFLAGS CPPFLAGS CFLAGS CXXFLAGS && \
 		$(MAKE) -s > /tmp/vspir_build.log 2>&1; \
 		build_exit=$$?; \
+		cd - > /dev/null; \
+		if [ $$build_exit -ne 0 ] && [ -f "$$LIB_PATH" ]; then \
+			echo "$(COLOR_YELLOW)Some VeriSimplePIR demo targets failed to build, but the library we need is there. Continuing.$(COLOR_RESET)"; \
+			build_exit=0; \
+		fi; \
 		if [ $$build_exit -ne 0 ]; then \
 			echo "$(COLOR_BOLD)Build failed. Showing errors:$(COLOR_RESET)"; \
 			grep -E "(error|Error|ERROR|failed|Failed)" /tmp/vspir_build.log | head -20 || tail -30 /tmp/vspir_build.log; \
@@ -140,7 +151,6 @@ $(VERISIMPLEPIR_LIB)$(LIBSUFFIX):
 			exit $$build_exit; \
 		fi; \
 		rm -f /tmp/vspir_build.log; \
-		cd - > /dev/null; \
 		if [ ! -f "$$LIB_PATH" ]; then \
 			echo "$(COLOR_BOLD)Error: Failed to build VeriSimplePIR library$(COLOR_RESET)"; \
 			exit 1; \

@@ -1,0 +1,23 @@
+[project]
+name = "respir"
+version = "0.1.0"
+description = "Simulations and figures for the R^2esPIR oblivious audit protocol"
+readme = "README.md"
+requires-python = ">=3.14.2"
+dependencies = [
+    "huggingface-hub>=0.36.0",
+    "matplotlib>=3.10.0",
+    "numpy>=2.4.0",
+    "pandas>=2.3.0",
+    "polars>=1.36.1",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.16.0",
+    "sentence-transformers>=5.2.0",
+    "skrub>=0.7.0",
+    "torch>=2.9.1",
+    "typer>=0.20.0",
+    "ucimlrepo>=0.0.7",
+]
+
+[tool.uv]
+package = false

@@ -1,143 +1,113 @@
-# Oblivious Audit
+# Oblivious Audit — R²esPIR
 
-Project using VeriSimplePIR to perform PIR (Private Information Retrieval) queries for an audit model purpose.
+Code for *Manipulation-Proof Oblivious Audits against Deceptive Model Providers*.
 
-## Getting Started
+The repository holds the two halves of the experimental evaluation:
 
-### Cloning the Repository
+| Part | Directory | Paper artifacts |
+| --- | --- | --- |
+| PIR benchmarks, built on [VeriSimplePIR](https://github.com/sofianeazogagh/VeriSimplePIR) (C++) | `src/`, `include/`, `Makefile` | Table 1 |
+| Audit simulations, bounds and figures (Python) | `main.py`, `respir/` | Tables 2 and 3, Figures 1 and 2 |
 
-To clone this repository with all submodules in one command:
+Every output is written to `generated/`.
+
+## 1. Install
 
 ```bash
-git clone --recursive git@github.com:sofianeazogagh/oblivious_audit.git
+git clone --recursive https://github.com/sofianeazogagh/oblivious_audit.git
 cd oblivious_audit
 ```
 
-Alternatively, if you've already cloned the repository without submodules:
+(If you cloned without `--recursive`: `git submodule update --init --recursive`.)
+
+**PIR benchmarks (C++).** Requires `clang++` (≥ 10), `make`, OpenSSL and `pkg-config`;
+Apache Arrow/Parquet is optional and only needed to run a query over a Parquet file.
 
 ```bash
-git clone git@github.com:sofianeazogagh/oblivious_audit.git
-cd oblivious_audit
-git submodule update --init --recursive
+sudo apt install make clang libssl-dev pkg-config    # Ubuntu/Debian
+brew install openssl pkg-config                      # macOS
+
+make          # builds VeriSimplePIR first (a few minutes), then bin/pir
 ```
 
-**Note:** This project uses VeriSimplePIR as a git submodule. Make sure to initialize submodules before building the project.
+Two caveats: `make` does not support paths containing spaces, and if Arrow is
+installed but does not build, `make PARQUET_SUPPORT=0` drops the (optional)
+Parquet reader.
 
-## Prerequisites
+**Simulations (Python).** Requires [uv](https://docs.astral.sh/uv/getting-started/installation/);
+it installs the pinned dependencies (`uv.lock`) and the right Python version on
+first use, so there is nothing else to set up. All commands below are run from
+the repository root.
 
-### Operating System
-- macOS or Linux (Ubuntu 20.04+ recommended)
+## 2. Reproduce the paper
 
-### Required Dependencies
-- `clang++` (version 10.0.0 or higher)
-- `make`
-- OpenSSL (for SHA)
-- `pkg-config` (to detect dependencies)
+### Table 1 — PIR cost
 
-### Installing Dependencies
-
-**On Ubuntu/Debian:**
-```bash
-sudo apt install make clang++ libssl-dev pkg-config
-```
-
-**On macOS:**
-```bash
-brew install openssl pkg-config
-```
-
-### Optional Dependencies
-- **Apache Arrow/Parquet**: For Parquet file support
-  - On Ubuntu: `sudo apt install libarrow-dev libparquet-dev`
-  - On macOS: `brew install apache-arrow`
-
-
-## Installation
-
-### Build the Project
-
-Simply run `make` in the project root directory. The Makefile will automatically build VeriSimplePIR if it hasn't been built yet, then compile the main project:
+`bin/pir --generate <N> <d> <index>` builds a random database of `N` entries of
+`d` bits and answers one query, reporting the query/answer/recovery times and
+sizes averaged over 10 runs. The database sizes of Table 1 correspond to a
+1-bit database (`d = 1`) of the following sizes:
 
 ```bash
-make
+./bin/pir --generate 2^20 1 0   # 128 KiB
+./bin/pir --generate 2^30 1 0   # 128 MiB
+./bin/pir --generate 2^33 1 0   #   1 GiB
+./bin/pir --generate 2^35 1 0   #   4 GiB
+./bin/pir --generate 2^36 1 0   #   8 GiB
 ```
 
-The executable will be created at `bin/pir`.
+The large sizes need a machine with enough RAM (~2× the database size). A query
+can also be run against a real label file: `./bin/pir data/labels.csv 5` or
+`./bin/pir data/labels.parquet 0 <column>`.
 
-**Note:** The first time you run `make`, it will automatically compile VeriSimplePIR (which may take a few minutes). Subsequent builds will be faster as VeriSimplePIR will only be rebuilt if needed.
+### Figure 1 — theoretical bounds
 
-<!-- ### Optional: Build VeriSimplePIR Separately
-
-If you want to build VeriSimplePIR separately:
+No data needed, runs in a few seconds:
 
 ```bash
-make verisimplepir
+uv run main.py plot-bounds
 ```
 
-The compiled library will be located at `VeriSimplePIR/bin/lib/libverisimplepir.dylib` (macOS) or `VeriSimplePIR/bin/lib/libverisimplepir.so` (Linux). -->
+writes `generated/fig_manipulation_costs_{balanced,unbalanced}.pdf` (Figure 1a)
+and `generated/fig_detection_probability_{balanced,unbalanced}.pdf` (Figure 1b).
 
+### Tables 2, 3 and Figure 2 — real datasets
 
-## Usage
-
-### General Syntax
+First download the datasets. COMPAS and Default of Credit Card Clients (CCD)
+are fetched automatically; [HateDay](https://huggingface.co/datasets/manueltonneau/hateday)
+is gated, so accept its conditions on the Hugging Face Hub and log in
+(`uv run hf auth login`, or export `HF_TOKEN`) beforehand.
 
 ```bash
-./bin/pir <data_file> [query_index]
+uv run main.py download-data
 ```
 
-or to generate a random database (much faster):
+The HateDay texts are then embedded with
+[distiluse-base-multilingual-cased-v2](https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2);
+this is by far the longest step (minutes on a GPU, up to an hour on CPU) and its
+result is cached in `generated/hateday_with_embeddings.parquet`.
 
 ```bash
-./bin/pir --generate <N> <d> [query_index]
+uv run main.py datasets-infos                # Table 2 -> generated/datasets_infos.csv
+uv run main.py manipulation-simulation-table # Table 3 -> generated/summary_results.csv
+uv run main.py plot-detection                # Figure 2 -> generated/fig_detection_vs_canaries.pdf
 ```
 
-### Parameters
+`datasets-infos` trains one gradient boosting classifier per (dataset,
+protected attribute) pair and must be run first: the other two commands read its
+output. It takes a few minutes, mostly on HateDay.
 
-- **`<data_file>`**: Path to a CSV or Parquet file containing a column of numeric values
-- **`<N>`**: Number of elements in the database (can be a number like `1024` or a power of 2 like `2^10` or `2**20`)
-- **`<d>`**: Number of bits per element (values in `[0, 2^d-1]`)
-- **`[query_index]`**: Index of the element to retrieve (default: 0)
-
-### Examples
-
-#### 1. Query on a CSV File
+### Appendix
 
 ```bash
-./bin/pir data/test.csv 5
+uv run main.py plot-appendix-scenarios       # bounds for the appendix audit sizes
+uv run main.py simulation                    # empirical manipulation cost -> generated/dpg_manipulation.csv
 ```
 
-Retrieves the element at index 5 from the `data/test.csv` file.
+Add `--tune-hparams` to `datasets-infos` or `simulation` to select the
+classifier hyperparameters by randomized search instead of using the defaults.
+`uv run main.py --help` documents every command.
 
-#### 2. Query on a Parquet File
+## Reference
 
-```bash
-./bin/pir data/database.parquet 0 value
-```
-
-Retrieves the element at index 0 from the `value` column in the Parquet file.
-
-#### 3. Generate a Random Database
-
-```bash
-./bin/pir --generate 1000 1 5
-```
-
-Generates a random database of 1000 elements with 1 bit per element (values 0 or 1) and retrieves the element at index 5.
-
-#### 4. Generation with Power of 2
-
-```bash
-./bin/pir --generate 2^10 8 42
-```
-
-or
-
-```bash
-./bin/pir --generate 2**20 8 42
-```
-
-Generates a database of 2^10 = 1024 elements (or 2^20 = 1048576) with 8 bits per element and retrieves the element at index 42.
-
-## References
-
-- [VeriSimplePIR](https://github.com/ahenzinger/simplepir): PIR library used in this project
+- [VeriSimplePIR](https://github.com/ahenzinger/simplepir) — de Castro and Lee, *VeriSimplePIR: Verifiability in SimplePIR at No Online Cost for Honest Servers*, USENIX Security 2024.

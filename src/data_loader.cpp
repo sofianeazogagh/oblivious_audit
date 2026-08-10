@@ -513,7 +513,7 @@ bool loadDatabaseFromParquet(Database& db,
                         db.data[idx] = entry_t(0);
                     } else {
                         int64_t value = int64_array->Value(i);
-                        db.data[idx] = entry_t(static_cast<unsigned long>(std::max(0LL, value)));
+                        db.data[idx] = entry_t(static_cast<unsigned long>(std::max<int64_t>(0, value)));
                     }
                     idx++;
                 }
@@ -626,7 +626,7 @@ void printParquetStats(const std::string& parquetFilePath,
                 for (int64_t i = 0; i < int64_array->length(); i++) {
                     if (int64_array->IsNull(i)) continue;
                     int64_t value = int64_array->Value(i);
-                    uint64_t uvalue = static_cast<uint64_t>(std::max(0LL, value));
+                    uint64_t uvalue = static_cast<uint64_t>(std::max<int64_t>(0, value));
                     if (uvalue < minVal) minVal = uvalue;
                     if (uvalue > maxVal) maxVal = uvalue;
                 }
