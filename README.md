@@ -1,6 +1,6 @@
 # Oblivious Audit — R²esPIR
 
-Code for *Manipulation-Proof Oblivious Audits against Deceptive Model Providers*.
+Code for *Manipulation-Proof Oblivious Audits against Deceptive Model Providers*. [preprint](https://arxiv.org/abs/2608.04365)
 
 The repository holds the two halves of the experimental evaluation:
 
